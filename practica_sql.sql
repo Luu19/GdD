@@ -397,4 +397,43 @@ FROM Producto p JOIN Item_Factura i on p.prod_codigo=i.item_producto
 GROUP BY YEAR(f.fact_fecha)*100+MONTH(f.fact_fecha), p.prod_codigo, p.prod_detalle, year(f.fact_fecha), month(f.fact_fecha), i.item_producto
 ORDER BY 1 DESC,2 
 
+/*18. Escriba una consulta que retorne una estadística de ventas para todos los rubros.
+La consulta debe retornar:
+DETALLE_RUBRO: Detalle del rubro
+VENTAS: Suma de las ventas en pesos de productos vendidos de dicho rubro
+PROD1: Código del producto más vendido de dicho rubro
+PROD2: Código del segundo producto más vendido de dicho rubro
+CLIENTE: Código del cliente que compro más productos del rubro en los últimos 30
+días
+La consulta no puede mostrar NULL en ninguna de sus columnas y debe estar ordenada
+por cantidad de productos diferentes vendidos del rubro.*/
 
+SELECT 
+r.rubr_detalle DETALLE_RUBRO,
+ISNULL(SUM(i.item_cantidad*i.item_precio),0) VENTAS,
+ISNULL((SELECT TOP 1 p1.prod_codigo
+        FROM Producto p1 JOIN Item_Factura i1 on i1.item_producto=p1.prod_codigo
+        WHERE p1.prod_rubro=r.rubr_id
+        GROUP BY p1.prod_codigo
+        ORDER BY SUM(i1.item_cantidad) DESC
+        ),'-') PROD1,
+ISNULL((SELECT TOP 1 p2.prod_codigo
+        FROM Producto p2 JOIN Item_Factura i2 on i2.item_producto=p2.prod_codigo
+        WHERE p2.prod_rubro=r.rubr_id AND p2.prod_codigo != (SELECT TOP 1 p3.prod_codigo
+                                                            FROM Producto p3 JOIN Item_Factura i3 on i3.item_producto=p3.prod_codigo
+                                                            WHERE p3.prod_rubro=r.rubr_id
+                                                            GROUP BY p3.prod_codigo
+                                                            ORDER BY SUM(i3.item_cantidad) DESC)
+        GROUP BY p2.prod_codigo
+        ORDER BY SUM(i2.item_cantidad) DESC),'-') PROD2,
+ISNULL((SELECT TOP 1 f.fact_cliente
+        FROM Producto p4 JOIN Item_Factura i4 on i4.item_producto=p4.prod_codigo
+                         JOIN Factura f on f.fact_tipo+f.fact_numero+f.fact_sucursal=i4.item_tipo+i4.item_numero+i4.item_sucursal
+        WHERE p4.prod_rubro=r.rubr_id AND f.fact_fecha >= DATEADD(DAY,-30,(SELECT MAX(fact_fecha) FROM Factura))
+        GROUP BY f.fact_cliente
+        ORDER BY COUNT(i4.item_cantidad) DESC --o seria item_producto?
+         ),'-') CLIENTE
+FROM Rubro r JOIN Producto p on r.rubr_id=p.prod_rubro
+             JOIN Item_Factura i on i.item_producto=p.prod_codigo   
+GROUP BY r.rubr_detalle, rubr_id
+ORDER BY COUNT(DISTINCT i.item_producto)

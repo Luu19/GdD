@@ -370,3 +370,36 @@ order by c.clie_domicilio asc
 	por periodo y código de producto.
 */
 
+select
+	FORMAT(f.fact_fecha, 'yyyyMM') AS periodo,
+	p.prod_codigo,
+	p.prod_detalle,
+	sum(i.item_cantidad) as cantidad,
+		ISNULL(
+	  (
+		SELECT 
+		  SUM(i2.item_cantidad)
+		FROM Item_Factura AS i2
+		JOIN Factura AS f2
+		  ON f2.fact_tipo + f2.fact_sucursal + f2.fact_numero
+		   = i2.item_tipo + i2.item_sucursal + i2.item_numero
+		WHERE 
+		  i2.item_producto = p.prod_codigo
+		  AND FORMAT(f2.fact_fecha, 'yyyyMM')
+			  = FORMAT(
+				  DATEADD(
+					YEAR, 
+					-1, 
+					CONVERT(date, FORMAT(f.fact_fecha,'yyyyMM') + '01')
+				  ), 
+				  'yyyyMM'
+				)
+	  ),
+	  0
+	) AS ventas_año_ant,
+	count(distinct f.fact_tipo + f.fact_sucursal + f.fact_numero)
+from Factura f
+join Item_Factura i on f.fact_tipo + f.fact_sucursal + f.fact_numero = i.item_tipo + i.item_sucursal + i.item_numero
+join Producto p on p.prod_codigo = i.item_producto
+group by FORMAT(f.fact_fecha, 'yyyyMM'), p.prod_codigo, p.prod_detalle
+order by FORMAT(f.fact_fecha, 'yyyyMM'), p.prod_codigo

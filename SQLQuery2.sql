@@ -1,8 +1,8 @@
-use GD2015C1
+Ôªøuse GD2015C1
 
 /*
-	Mostrar el cÛdigo, razÛn social de todos los clientes cuyo lÌmite de crÈdito sea mayor o 
-	igual a $ 1000 ordenado por cÛdigo de cliente
+	Mostrar el c√≥digo, raz√≥n social de todos los clientes cuyo l√≠mite de cr√©dito sea mayor o 
+	igual a $ 1000 ordenado por c√≥digo de cliente
 */
 select 
 	c.clie_codigo,
@@ -11,7 +11,7 @@ from Cliente c
 where c.clie_limite_credito >= 1000
 
 /*
-	Mostrar el cÛdigo, detalle de todos los artÌculos vendidos en el aÒo 2012 ordenados por 
+	Mostrar el c√≥digo, detalle de todos los art√≠culos vendidos en el a√±o 2012 ordenados por 
 	cantidad vendida.
 */
 select 
@@ -25,9 +25,9 @@ group by p.prod_codigo, p.prod_detalle
 order by sum(i.item_cantidad)
 
 /*
-	Realizar una consulta que muestre cÛdigo de producto, nombre de producto y el stock 
+	Realizar una consulta que muestre c√≥digo de producto, nombre de producto y el stock 
 	total, sin importar en que deposito se encuentre, los datos deben ser ordenados por 
-	nombre del artÌculo de menor a mayor.
+	nombre del art√≠culo de menor a mayor.
 */
 select 
 	p.prod_codigo,
@@ -39,9 +39,9 @@ group by p.prod_codigo, p.prod_detalle
 order by 2
 
 /*
-	Realizar una consulta que muestre para todos los artÌculos cÛdigo, detalle y cantidad de 
-	artÌculos que lo componen. Mostrar solo aquellos artÌculos para los cuales el stock 
-	promedio por depÛsito sea mayor a 100.
+	Realizar una consulta que muestre para todos los art√≠culos c√≥digo, detalle y cantidad de 
+	art√≠culos que lo componen. Mostrar solo aquellos art√≠culos para los cuales el stock 
+	promedio por dep√≥sito sea mayor a 100.
 */
 select 
 	p.prod_codigo,
@@ -59,9 +59,9 @@ having p.prod_codigo in
 )
 
 /*
-	Realizar una consulta que muestre cÛdigo de artÌculo, detalle y cantidad de egresos de 
-	stock que se realizaron para ese artÌculo en el aÒo 2012 (egresan los productos que 
-	fueron vendidos). Mostrar solo aquellos que hayan tenido m·s egresos que en el 2011.
+	Realizar una consulta que muestre c√≥digo de art√≠culo, detalle y cantidad de egresos de 
+	stock que se realizaron para ese art√≠culo en el a√±o 2012 (egresan los productos que 
+	fueron vendidos). Mostrar solo aquellos que hayan tenido m√°s egresos que en el 2011.
 */
 select 
 	p.prod_codigo,
@@ -81,9 +81,9 @@ having sum(i.item_cantidad) > (
 	)
 
 /*
-	Mostrar para todos los rubros de artÌculos cÛdigo, detalle, cantidad de artÌculos de ese 
-	rubro y stock total de ese rubro de artÌculos. Solo tener en cuenta aquellos artÌculos que 
-	tengan un stock mayor al del artÌculo ë00000000í en el depÛsito ë00í.
+	Mostrar para todos los rubros de art√≠culos c√≥digo, detalle, cantidad de art√≠culos de ese 
+	rubro y stock total de ese rubro de art√≠culos. Solo tener en cuenta aquellos art√≠culos que 
+	tengan un stock mayor al del art√≠culo ‚Äò00000000‚Äô en el dep√≥sito ‚Äò00‚Äô.
 */
 select 
 	r.rubr_id,
@@ -107,9 +107,9 @@ where s.stoc_cantidad > (
 group by r.rubr_id, r.rubr_detalle
 
 /*
-	Generar una consulta que muestre para cada artÌculo cÛdigo, detalle, mayor precio 
+	Generar una consulta que muestre para cada art√≠culo c√≥digo, detalle, mayor precio 
 	menor precio y % de la diferencia de precios (respecto del menor Ej.: menor precio = 
-	10, mayor precio =12 => mostrar 20 %). Mostrar solo aquellos artÌculos que posean 
+	10, mayor precio =12 => mostrar 20 %). Mostrar solo aquellos art√≠culos que posean 
 	stock.
 */
 select
@@ -127,8 +127,8 @@ where p.prod_codigo in (select s.stoc_producto from STOCK s where s.stoc_cantida
 group by p.prod_codigo, p.prod_detalle
 
 /*
-	Mostrar para el o los artÌculos que tengan stock en todos los depÛsitos, nombre del
-	artÌculo, stock del depÛsito que m·s stock tiene.
+	Mostrar para el o los art√≠culos que tengan stock en todos los dep√≥sitos, nombre del
+	art√≠culo, stock del dep√≥sito que m√°s stock tiene.
 */
 select
 	p.prod_detalle,
@@ -139,8 +139,8 @@ group by p.prod_codigo, p.prod_detalle
 having count(distinct s.stoc_deposito) = (select count(*) from DEPOSITO) -- tiene stock en todos los depositos
 
 /*
-	Mostrar el cÛdigo del jefe, cÛdigo del empleado que lo tiene como jefe, nombre del
-	mismo y la cantidad de depÛsitos que ambos tienen asignados.
+	Mostrar el c√≥digo del jefe, c√≥digo del empleado que lo tiene como jefe, nombre del
+	mismo y la cantidad de dep√≥sitos que ambos tienen asignados.
 */
 select
 	e.empl_codigo,
@@ -149,8 +149,8 @@ select
 from Empleado e
 
 /*
-	Mostrar los 10 productos m·s vendidos en la historia y tambiÈn los 10 productos menos 
-	vendidos en la historia. Adem·s mostrar de esos productos, quien fue el cliente que 
+	Mostrar los 10 productos m√°s vendidos en la historia y tambi√©n los 10 productos menos 
+	vendidos en la historia. Adem√°s mostrar de esos productos, quien fue el cliente que 
 	mayor compra realizo.
 */
 select  
@@ -186,16 +186,16 @@ group by p.prod_codigo, p.prod_detalle
 
 /*
 	11 - Realizar una consulta que retorne el detalle de la familia, la cantidad diferentes de
-	productos vendidos y el monto de dichas ventas sin impuestos. Los datos se deber·n 
-	ordenar de mayor a menor, por la familia que m·s productos diferentes vendidos tenga, 
-	solo se deber·n mostrar las familias que tengan una venta superior a 20000 pesos para 
-	el aÒo 2012.
+	productos vendidos y el monto de dichas ventas sin impuestos. Los datos se deber√°n 
+	ordenar de mayor a menor, por la familia que m√°s productos diferentes vendidos tenga, 
+	solo se deber√°n mostrar las familias que tengan una venta superior a 20000 pesos para 
+	el a√±o 2012.
 */
 select
 	fam.fami_detalle,
 	count(distinct i.item_producto) as productos_distintos_vendidos,
 	sum(f.fact_total) as total
-	-- tambiÈn se puede hacer sin Factura y poner SUM(item_precio * item_cantidad) en vez de sum(f.fact_total)
+	-- tambi√©n se puede hacer sin Factura y poner SUM(item_precio * item_cantidad) en vez de sum(f.fact_total)
 from Familia fam
 join Producto p on p.prod_familia = fam.fami_id
 join Item_Factura i on i.item_producto = p.prod_codigo 
@@ -216,9 +216,9 @@ order by 2 desc
 
 /*
 	12 - Mostrar nombre de producto, cantidad de clientes distintos que lo compraron, importe 
-	promedio pagado por el producto, cantidad de depÛsitos en los cuales hay stock del 
-	producto y stock actual del producto en todos los depÛsitos. Se deber·n mostrar 
-	aquellos productos que hayan tenido operaciones en el aÒo 2012 y los datos deber·n 
+	promedio pagado por el producto, cantidad de dep√≥sitos en los cuales hay stock del 
+	producto y stock actual del producto en todos los dep√≥sitos. Se deber√°n mostrar 
+	aquellos productos que hayan tenido operaciones en el a√±o 2012 y los datos deber√°n 
 	ordenarse de mayor a menor por monto vendido del producto.
 */
 select
@@ -244,10 +244,10 @@ having p.prod_codigo in
 order by sum(i.item_cantidad * i.item_precio) desc
 
 /*
-	13 - Realizar una consulta que retorne para cada producto que posea composiciÛn nombre 
+	13 - Realizar una consulta que retorne para cada producto que posea composici√≥n nombre 
 	del producto, precio del producto, precio de la sumatoria de los precios por la cantidad 
-	de los productos que lo componen. Solo se deber·n mostrar los productos que estÈn 
-	compuestos por m·s de 2 productos y deben ser ordenados de mayor a menor por 
+	de los productos que lo componen. Solo se deber√°n mostrar los productos que est√©n 
+	compuestos por m√°s de 2 productos y deben ser ordenados de mayor a menor por 
 	cantidad de productos que lo componen.
 */
 select
@@ -262,16 +262,16 @@ having count(distinct c.comp_componente) > 2
 order by sum(c.comp_cantidad)
 
 /*
-	14 - Escriba una consulta que retorne una estadÌstica de ventas por cliente. Los campos que 
+	14 - Escriba una consulta que retorne una estad√≠stica de ventas por cliente. Los campos que 
 	debe retornar son:
-		CÛdigo del cliente
-		Cantidad de veces que compro en el ˙ltimo aÒo
-		Promedio por compra en el ˙ltimo aÒo
-		Cantidad de productos diferentes que compro en el ˙ltimo aÒo
-		Monto de la mayor compra que realizo en el ˙ltimo aÒo
-	Se deber·n retornar todos los clientes ordenados por la cantidad de veces que compro en 
-	el ˙ltimo aÒo.
-	No se deber·n visualizar NULLs en ninguna columna
+		C√≥digo del cliente
+		Cantidad de veces que compro en el √∫ltimo a√±o
+		Promedio por compra en el √∫ltimo a√±o
+		Cantidad de productos diferentes que compro en el √∫ltimo a√±o
+		Monto de la mayor compra que realizo en el √∫ltimo a√±o
+	Se deber√°n retornar todos los clientes ordenados por la cantidad de veces que compro en 
+	el √∫ltimo a√±o.
+	No se deber√°n visualizar NULLs en ninguna columna
 */
 select
 	c.clie_codigo,
@@ -288,10 +288,10 @@ order by count(f.fact_cliente)
 
 /*
 	15 - Escriba una consulta que retorne los pares de productos que hayan sido vendidos juntos 
-	(en la misma factura) m·s de 500 veces. El resultado debe mostrar el cÛdigo y 
-	descripciÛn de cada uno de los productos y la cantidad de veces que fueron vendidos 
+	(en la misma factura) m√°s de 500 veces. El resultado debe mostrar el c√≥digo y 
+	descripci√≥n de cada uno de los productos y la cantidad de veces que fueron vendidos 
 	juntos. El resultado debe estar ordenado por la cantidad de veces que se vendieron 
-	juntos dichos productos. Los distintos pares no deben retornarse m·s de una vez.
+	juntos dichos productos. Los distintos pares no deben retornarse m√°s de una vez.
 
 */
 -- creo que quedaria mas performante 2 joins a Producto
@@ -313,18 +313,18 @@ HAVING COUNT(*) > 500
 ORDER BY 5
 
 /*
-	16 - Con el fin de lanzar una nueva campaÒa comercial para los clientes que menos compran 
+	16 - Con el fin de lanzar una nueva campa√±a comercial para los clientes que menos compran 
 	en la empresa, se pide una consulta SQL que retorne aquellos clientes cuyas ventas son 
-	inferiores a 1/3 del promedio de ventas del producto que m·s se vendiÛ en el 2012.
-	Adem·s mostrar
+	inferiores a 1/3 del promedio de ventas del producto que m√°s se vendi√≥ en el 2012.
+	Adem√°s mostrar
 		1. Nombre del Cliente
 		2. Cantidad de unidades totales vendidas en el 2012 para ese cliente.
-		3. CÛdigo de producto que mayor venta tuvo en el 2012 (en caso de existir m·s de 1, 
-		mostrar solamente el de menor cÛdigo) para ese cliente.
+		3. C√≥digo de producto que mayor venta tuvo en el 2012 (en caso de existir m√°s de 1, 
+		mostrar solamente el de menor c√≥digo) para ese cliente.
 	Aclaraciones:
-	La composiciÛn es de 2 niveles, es decir, un producto compuesto solo se compone de 
+	La composici√≥n es de 2 niveles, es decir, un producto compuesto solo se compone de 
 	productos no compuestos.
-	Los clientes deben ser ordenados por cÛdigo de provincia ascendente.
+	Los clientes deben ser ordenados por c√≥digo de provincia ascendente.
 */
 select 
 	c.clie_razon_social,
@@ -355,19 +355,19 @@ order by c.clie_domicilio asc
 
 
 /*
-	17 - Escriba una consulta que retorne una estadÌstica de ventas por aÒo y mes para cada
+	17 - Escriba una consulta que retorne una estad√≠stica de ventas por a√±o y mes para cada
 	producto.
 	La consulta debe retornar:
-		PERIODO: AÒo y mes de la estadÌstica con el formato YYYYMM
-		PROD: CÛdigo de producto
+		PERIODO: A√±o y mes de la estad√≠stica con el formato YYYYMM
+		PROD: C√≥digo de producto
 		DETALLE: Detalle del producto
 		CANTIDAD_VENDIDA= Cantidad vendida del producto en el periodo
-		VENTAS_A—O_ANT= Cantidad vendida del producto en el mismo mes del periodo 
-		pero del aÒo anterior
-		CANT_FACTURAS= Cantidad de facturas en las que se vendiÛ el producto en el 
+		VENTAS_A√ëO_ANT= Cantidad vendida del producto en el mismo mes del periodo 
+		pero del a√±o anterior
+		CANT_FACTURAS= Cantidad de facturas en las que se vendi√≥ el producto en el 
 		periodo	
 	La consulta no puede mostrar NULL en ninguna de sus columnas y debe estar ordenada 
-	por periodo y cÛdigo de producto.
+	por periodo y c√≥digo de producto.
 */
 
 select
@@ -396,10 +396,140 @@ select
 				)
 	  ),
 	  0
-	) AS ventas_aÒo_ant,
+	) AS ventas_a√±o_ant,
 	count(distinct f.fact_tipo + f.fact_sucursal + f.fact_numero)
 from Factura f
 join Item_Factura i on f.fact_tipo + f.fact_sucursal + f.fact_numero = i.item_tipo + i.item_sucursal + i.item_numero
 join Producto p on p.prod_codigo = i.item_producto
 group by FORMAT(f.fact_fecha, 'yyyyMM'), p.prod_codigo, p.prod_detalle
 order by FORMAT(f.fact_fecha, 'yyyyMM'), p.prod_codigo
+
+/*
+18 - Escriba una consulta que retorne una estad√≠stica de ventas para todos los rubros.
+	La consulta debe retornar:
+	DETALLE_RUBRO: Detalle del rubro
+	VENTAS: Suma de las ventas en pesos de productos vendidos de dicho rubro
+	PROD1: C√≥digo del producto m√°s vendido de dicho rubro
+	PROD2: C√≥digo del segundo producto m√°s vendido de dicho rubro
+	CLIENTE: C√≥digo del cliente que compro m√°s productos del rubro en los √∫ltimos 30 
+	d√≠as
+	La consulta no puede mostrar NULL en ninguna de sus columnas y debe estar ordenada 
+	por cantidad de productos diferentes vendidos del rubro.
+*/
+select
+	r.rubr_detalle,
+	sum(i.item_cantidad * i.item_precio),
+	ISNULL(
+		(
+		  SELECT TOP 1 i1.item_producto
+		  FROM Item_Factura AS i1
+		  JOIN Factura     AS f1
+			ON f1.fact_tipo    + f1.fact_sucursal + f1.fact_numero
+			 = i1.item_tipo    + i1.item_sucursal + i1.item_numero
+		  JOIN Producto    AS p1
+			ON p1.prod_codigo = i1.item_producto
+		  WHERE p1.prod_rubro = r.rubr_id
+		  GROUP BY i1.item_producto
+		  ORDER BY SUM(i1.item_cantidad) DESC
+		),
+		'SIN_PROD'   
+	  ) AS PROD1,
+
+  ISNULL(
+    (
+      SELECT TOP 1 i2.item_producto
+      FROM Item_Factura AS i2
+      JOIN Factura     AS f2
+        ON f2.fact_tipo    + f2.fact_sucursal + f2.fact_numero
+         = i2.item_tipo    + i2.item_sucursal + i2.item_numero
+      JOIN Producto    AS p2
+        ON p2.prod_codigo = i2.item_producto
+      WHERE 
+        p2.prod_rubro = r.rubr_id
+        AND i2.item_producto <> 
+          (
+            SELECT TOP 1 sub1.item_producto
+            FROM Item_Factura AS sub1
+            JOIN Factura     AS subf1
+              ON subf1.fact_tipo    + subf1.fact_sucursal + subf1.fact_numero
+               = sub1.item_tipo    + sub1.item_sucursal + sub1.item_numero
+            JOIN Producto    AS subp1
+              ON subp1.prod_codigo = sub1.item_producto
+            WHERE subp1.prod_rubro = r.rubr_id
+            GROUP BY sub1.item_producto
+            ORDER BY SUM(sub1.item_cantidad) DESC
+          )
+      GROUP BY i2.item_producto
+      ORDER BY SUM(i2.item_cantidad) DESC
+    ),
+    'SIN_PROD'   
+  ) AS PROD2,
+  isnull((
+	select top 1 f1.fact_cliente
+	from Factura f1
+	join Item_Factura i1 on f1.fact_tipo    + f1.fact_sucursal + f1.fact_numero
+			 = i1.item_tipo    + i1.item_sucursal + i1.item_numero
+	join Producto p1 on p1.prod_codigo = i1.item_producto
+	where p1.prod_rubro = r.rubr_id and f1.fact_fecha >=DATEADD(DAY, -30, GETDATE())
+	group by f1.fact_cliente
+	order by sum(i1.item_cantidad) desc
+  ), 'No HAY CLIENTE')
+
+from Rubro r
+join Producto p on p.prod_rubro = r.rubr_id
+join Item_Factura i on i.item_producto = p.prod_codigo
+group by r.rubr_id, r.rubr_detalle
+
+/*
+	19 - En virtud de una recategorizacion de productos referida a la familia de los mismos se 
+	solicita que desarrolle una consulta sql que retorne para todos los productos:
+		ÔÇ∑ Codigo de producto
+		ÔÇ∑ Detalle del producto
+		ÔÇ∑ Codigo de la familia del producto
+		ÔÇ∑ Detalle de la familia actual del producto
+		ÔÇ∑ Codigo de la familia sugerido para el producto
+		ÔÇ∑ Detalla de la familia sugerido para el producto
+	La familia sugerida para un producto es la que poseen la mayoria de los productos cuyo 
+	detalle coinciden en los primeros 5 caracteres.
+	En caso que 2 o mas familias pudieran ser sugeridas se debera seleccionar la de menor 
+	codigo. Solo se deben mostrar los productos para los cuales la familia actual sea 
+	diferente a la sugerida
+	Los resultados deben ser ordenados por detalle de producto de manera ascendente
+*/
+select
+	p.prod_codigo,
+	p.prod_detalle,
+	fa.fami_id as actual_cod_familia,
+	fa.fami_detalle as actual_detalle_familia,
+	(
+		select top 1 ps.prod_familia
+		from  Producto ps 
+		where LEFT(ps.prod_detalle, 5) = LEFT(p.prod_detalle, 5)
+		group by ps.prod_familia
+		order by count(ps.prod_codigo) desc, ps.prod_familia asc
+	),
+	(
+		select top 1 fs.fami_detalle
+		from  Producto ps 
+		join Familia fs on fs.fami_id = ps.prod_familia
+		where LEFT(ps.prod_detalle, 5) = LEFT(p.prod_detalle, 5)
+		group by ps.prod_familia, fs.fami_detalle
+		order by count(ps.prod_codigo) desc, ps.prod_familia asc
+	)
+from Producto p
+join Familia fa on fa.fami_id = p.prod_familia
+WHERE 
+  -- 5) Solo mostrar aquellos donde la familia actual difiera de la sugerida
+  p.prod_familia <>
+  (
+    SELECT TOP 1
+      ps2.prod_familia
+    FROM Producto AS ps2
+    WHERE LEFT(ps2.prod_detalle, 5) = LEFT(p.prod_detalle, 5)
+    GROUP BY ps2.prod_familia
+    ORDER BY
+      COUNT(ps2.prod_codigo) DESC,
+      ps2.prod_familia       ASC
+  )
+order by p.prod_detalle asc
+

@@ -533,3 +533,90 @@ WHERE
   )
 order by p.prod_detalle asc
 
+/*
+	20. Escriba una consulta sql que 
+	retorne un ranking de los mejores 3 empleados del 2012
+	Se debera retornar 
+		legajo, 
+		nombre y apellido, 
+		anio de ingreso, 
+		puntaje 2011, 
+		puntaje 2012. 
+			El puntaje de cada empleado se calculara de la siguiente manera: 
+			para los que hayan vendido al menos 50 facturas el puntaje se calculara como la cantidad de facturas 
+			que superen los 100 pesos que haya vendido en el año, 
+			para los que tengan menos de 50 facturas en el año el calculo del puntaje sera 
+			el 50% de cantidad de facturas realizadas por sus subordinados directos en dicho año
+*/
+select top 3
+	e.empl_codigo as nro_legajo,
+	e.empl_nombre + ' ' + e.empl_apellido as nombre,
+	e.empl_nacimiento as fecha_nac, -- pongo cualquier fecha
+	case when ( select count(*) from Factura as f1 where f1.fact_vendedor = e.empl_codigo and year(f1.fact_fecha) = 2011
+		) > 50 then 
+			(select count(*) from Factura as f1 where f1.fact_vendedor = e.empl_codigo and year(f1.fact_fecha) = 2011 and f1.fact_total > 100)
+			else 0.5 * (
+				select count(*) from Factura f
+				join Empleado e on e.empl_codigo = f.fact_vendedor
+				where f.fact_vendedor in (select e1.empl_codigo from Empleado e1 where e1.empl_jefe = e.empl_codigo) and year(f.fact_fecha) = 2011
+			) end as puntaje_2011,
+	case when ( select count(*) from Factura as f1 where f1.fact_vendedor = e.empl_codigo and year(f1.fact_fecha) = 2012
+		) > 50 then 
+			(select count(*) from Factura as f1 where f1.fact_vendedor = e.empl_codigo and year(f1.fact_fecha) = 2012 and f1.fact_total > 100)
+			else 0.5 * (
+				select count(*) from Factura f
+				where f.fact_vendedor in (select e1.empl_codigo from Empleado e1 where e1.empl_jefe = e.empl_codigo) and year(f.fact_fecha) = 2012
+			) end as puntaje_2012
+
+from Empleado e
+ORDER BY 1 DESC
+
+/*
+	21. Escriba una consulta sql que retorne para todos los años, en los cuales se haya hecho al 
+	menos una factura, la cantidad de clientes a los que se les facturo de manera incorrecta 
+	al menos una factura y que cantidad de facturas se realizaron de manera incorrecta. 
+	Se considera que una factura 
+		es incorrecta 
+		cuando la diferencia entre el total de la factura 
+		menos el total de impuesto 
+		tiene una diferencia mayor a $ 1 
+		respecto a la sumatoria de los costos de cada uno de los items de dicha factura. 
+		Las columnas que se deben mostrar son:
+		 Año
+		 Clientes a los que se les facturo mal en ese año
+		 Facturas mal realizadas en ese año
+*/
+select 
+	year(f.fact_fecha) as 'Anio',
+	count(f.fact_cliente) as total_clientes,
+	count(f.fact_tipo + f.fact_sucursal + f.fact_numero) as total_factura
+from Factura f
+
+where (f.fact_total - f.fact_total_impuestos) - 
+	(
+		select 
+			sum(i.item_cantidad * i.item_precio)
+		from Item_Factura i 
+		where f.fact_tipo + f.fact_sucursal + f.fact_numero = i.item_tipo    + i.item_sucursal + i.item_numero
+	) > 1
+group by year(f.fact_fecha)
+order by year(f.fact_fecha)
+
+/*
+22. Escriba una consulta sql que retorne una estadistica de venta para todos los rubros por 
+trimestre contabilizando todos los años. Se mostraran como maximo 4 filas por rubro (1 
+por cada trimestre).
+Se deben mostrar 4 columnas:
+	 Detalle del rubro
+	 Numero de trimestre del año (1 a 4)
+	 Cantidad de facturas emitidas en el trimestre en las que se haya vendido al 
+	menos un producto del rubro
+	 Cantidad de productos diferentes del rubro vendidos en el trimestre 
+El resultado debe ser ordenado alfabeticamente por el detalle del rubro y dentro de cada 
+rubro primero el trimestre en el que mas facturas se emitieron.
+No se deberan mostrar aquellos rubros y trimestres para los cuales las facturas emitiadas 
+no superen las 100.
+En ningun momento se tendran en cuenta los productos compuestos para esta 
+estadistica.
+*/
+

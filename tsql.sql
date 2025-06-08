@@ -179,3 +179,220 @@ return
 END
 GO
 
+/*
+	6. Realizar un procedimiento que si en alguna factura se facturaron componentes
+	que conforman un combo determinado (o sea que juntos componen otro
+	producto de mayor nivel), en cuyo caso deberá reemplazar las filas
+	correspondientes a dichos productos por una sola fila con el producto que
+	componen con la cantidad de dicho producto que corresponda.
+*/
+CREATE PROCEDURE dbo.ejericcio6
+AS
+BEGIN
+    -- Declaración de variables internas
+    declare @fact_tipo char(1)
+    declare @fact_sucursal char(4)
+	declare @fact_numero char(4)
+
+	declare @comp_producto char(8)
+	declare @comp_cantidad decimal(12, 0)
+
+	declare @precio_combo DECIMAL(12,0)
+
+
+	--- Cursor para las facturas
+	declare cursor_factura cursor for
+		select 
+			f.fact_tipo,
+			f.fact_sucursal,
+			f.fact_numero
+		from Factura f
+
+	open cursor_factura
+	fetch next from cursor_factura into @fact_tipo, @fact_sucursal, @fact_numero
+	while @FETCH_STATUS = 0
+
+	begin 
+		--- Cursor para los items
+		declare cursor_item cursor for
+		select 
+			c.comp_producto
+		from Item_Factura i
+		join Composicion c on c.comp_componente = i.item_producto
+		where i.item_tipo + i.item_sucursar + i.item_numero = @fact_tipo + @fact_sucursal + @fact_numero and i.item_cantidad > c.comp_cantidad 
+		group by c.comp_producto
+		having count(*) = (select count(*) from Composicion where comp_producto= c.comp_producto)
+
+		open cursor_item
+		fetch next from cursor_item into @comp_producto
+		while @FETCH_STATUS = 0
+		begin
+			select @cantidad_combo = min(floor(item_cantidad/c.comp_cantidad))
+			from Item_Factura
+			join Composicion c on c.comp_componente = i.item_producto
+			where i.item_producto = @comp_producto
+			and i.item_tipo + i.item_sucursar + i.item_numero = @fact_tipo + @fact_sucursal + @fact_numero 
+			and i.item_cantidad > c.comp_cantidad 
+			and c.comp_producto = @comp_producto
+
+			select @precio_combo = @cantidad_combo * prod_precio from Producto where prod_codigo = @comp_producto
+			-- insertamos
+
+			INSERT INTO [dbo].[Item_Factura]
+					   ([item_tipo]
+					   ,[item_sucursal]
+					   ,[item_numero]
+					   ,[item_producto]
+					   ,[item_cantidad]
+					   ,[item_precio])
+				 VALUES
+					   (@fact_tipo
+					   ,@fact_sucursal
+					   ,@fact_numero
+					   ,@comp_producto
+					   ,@cantidad_combo
+					   ,@precio_combo);
+
+			update Item_Factura set 
+				item_cantidad = item_cantidad - (@cantidad_combo * select comp_cantidad from Composicion 
+								where comp_componente = item_producto and comp_producto = @comp_producto)
+				item_precio = (item_cantidad - (@cantidad_combo * select comp_cantidad from Composicion 
+								where comp_componente = item_producto and comp_producto = @comp_producto)) *
+								(select prod_precio from Producto where prod_codigo = item_producto)
+			from Item_Factura, Composicion C1 
+			where I1.item_sucursal = @fact_sucursal and
+				  I1.item_numero = @fact_numero and
+				  I1.item_tipo = @fact_tipo AND
+				  I1.item_producto = C1.comp_componente AND
+				  C1.comp_producto = @comp_producto
+			-- Elimina todas las filas de ítems de la factura cuya cantidad quedó en 0
+			delete from Item_Factura
+			where item_sucursal = @fact_sucursal and
+				  item_numero = @fact_numero and
+				  item_tipo = @fact_tipo and
+				  item_cantidad = 0 
+END
+GO
+
+/*
+	7. Hacer un procedimiento que dadas dos fechas complete la tabla Ventas. Debe
+	insertar una línea por cada artículo con los movimientos de stock generados por
+	las ventas entre esas fechas. La tabla se encuentra creada y vacía.
+*/
+
+IF OBJECT_ID('Ventas','U') IS NOT NULL 
+DROP TABLE Ventas
+GO
+Create table Ventas
+(
+vent_codigo char(8) NULL, --Código del articulo
+vent_detalle char(50) NULL, --Detalle del articulo
+vent_movimientos int NULL, --Cantidad de movimientos de ventas (Item Factura)
+vent_precio_prom decimal(12,2) NULL, --Precio promedio de venta
+vent_renglon int IDENTITY(1,1) PRIMARY KEY, --Nro de linea de la tabla (PK)
+vent_ganancia char(6) NOT NULL, --Precio de venta - Cantidad * Costo Actual
+)
+
+
+CREATE PROCEDURE Ejercicio7 (@fecha_1 datetime, @fecha_2 datetime)
+AS
+BEGIN
+	declare @producto_codigo char(8)
+	declare @producto_detalle char(8)
+	declare @cantidad_mov decimal(12,0)
+	declare @precio_promedio decimal(12,2)
+	declare @ganacia decimal(12,2)
+
+    declare @fact_tipo char(1)
+    declare @fact_sucursal char(4)
+	declare @fact_numero char(4)
+
+	declare cursor_items cursor for
+		select 
+			p.prod_codigo,
+			p.prod_detalle,
+			count(i.item_producto),
+			avg(i.item_precio)
+			,sum(i.item_cantidad*i.item_precio)
+		from Factura
+		join Item_Factura i on i.item_tipo + i.item_sucursar + i.item_numero = fact_tipo + fact_sucursal + fact_numero 
+		join Producto p on p.prod_codigo = i.item_producto
+		where f.fact_fecha > @fecha_1 and f.fact_fecha < @fecha_2
+		group by p.prod_codigo, p.prod_detalle
+
+	open cursor_items
+	fetch next from cursor_items into @producto_codigo, @producto_detalle, @cantidad_mov, @precio_promedio, @ganacia
+	while @FETCH_STATUS = 0
+	begin 
+		insert into VENTAS
+		values
+			(@producto_codigo, @producto_detalle, @cantidad_mov, @precio_promedio, ROW_NUMBER(), @ganacia)
+	fetch next from cursor_items into @producto_codigo, @producto_detalle, @cantidad_mov, @precio_promedio, @ganacia
+	END
+	CLOSE cursor_items
+	DEALLOCATE cursor_items
+END
+GO
+
+/*
+	8. Realizar un procedimiento que complete la tabla Diferencias de precios, para los
+	productos facturados que tengan composición y en los cuales el precio de
+	facturación sea diferente al precio del cálculo de los precios unitarios por
+	cantidad de sus componentes, se aclara que un producto que compone a otro,
+	también puede estar compuesto por otros y así sucesivamente, la tabla se debe
+	crear y está formada por las siguientes columnas:
+	Código | Código Detalle | Cantidad | Precio_generado | Precio_facturado
+*/
+IF OBJECT_ID('Diferencias','U') IS NOT NULL 
+DROP TABLE Diferencias
+GO
+
+CREATE TABLE Diferencias
+(
+	dif_codigo char(8) NULL
+	,dif_detalle char(50) NULL
+	,dif_cantidad int NULL
+	,dif_precio_generado decimal(12,2) NULL
+	,dif_precio_facturado decimal(12,2) NULL
+)
+
+CREATE PROCEDURE Ejercicio8 
+AS
+BEGIN
+	declare @producto_codigo char(8)
+	declare @producto_detalle char(8)
+	declare @cantidad_prod decimal(12,0)
+	declare @precio_generado decimal(12,2)
+	declare @precio_facturado decimal(12,2)
+
+    declare @fact_tipo char(1)
+    declare @fact_sucursal char(4)
+	declare @fact_numero char(4)
+
+	declare cursor_item cursor for
+		select 
+			p.prod_codigo,
+			p.prod_detalle,
+			count(c.comp_componente),
+			dbo.precio_producto(p.prod_codigo),
+			i.item_precio
+		from Item_Factura i
+		join Producto p on p.prod_codigo = i.item_producto
+		join Composicion c on c.comp_producto = p.prod_codigo
+		group by p.prod_codigo, p.prod_detalle
+
+	open cursor_items
+	fetch next from cursor_items into @producto_codigo, @producto_detalle, @cantidad_prod, @precio_generado, @precio_facturado
+	while @FETCH_STATUS = 0
+	begin 
+		insert into Diferencias
+		values
+			(@producto_codigo, @producto_detalle, @cantidad_prod, @precio_generado, @precio_facturado)
+	fetch next from cursor_items into @producto_codigo, @producto_detalle, @cantidad_prod, @precio_generado, @precio_facturado
+	END
+	CLOSE cursor_items
+	DEALLOCATE cursor_items
+END
+GO
+
+-- El 9  es un trigger

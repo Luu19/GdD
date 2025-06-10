@@ -477,3 +477,71 @@ WHERE p.prod_familia != (SELECT TOP 1 p1.prod_familia
                         GROUP BY p1.prod_familia
                         ORDER BY COUNT(*) DESC, p1.prod_familia)
 ORDER BY p.prod_detalle 
+
+/*20. Escriba una consulta sql que retorne un ranking de los mejores 3 empleados del 2012
+Se debera retornar legajo, nombre y apellido, anio de ingreso, puntaje 2011, puntaje
+2012. El puntaje de cada empleado se calculara de la siguiente manera: para los que
+hayan vendido al menos 50 facturas el puntaje se calculara como la cantidad de facturas
+que superen los 100 pesos que haya vendido en el año, para los que tengan menos de 50
+facturas en el año el calculo del puntaje sera el 50% de cantidad de facturas realizadas
+por sus subordinados directos en dicho año.*/
+
+SELECT TOP 3 
+e.empl_codigo LEGAJO, 
+e.empl_nombre+empl_apellido NOMBRE_Y_APELLIDO, 
+YEAR(e.empl_ingreso) AÑO_INGRESO,
+(CASE 
+WHEN (SELECT COUNT(*) 
+      FROM Factura f
+      WHERE f.fact_vendedor=e.empl_codigo AND YEAR(f.fact_fecha)=2011) >=50
+THEN (SELECT COUNT(*) 
+      FROM Factura f1 
+      WHERE e.empl_codigo=f1.fact_vendedor and YEAR(f1.fact_fecha)=2011 and f1.fact_total>100)
+ELSE(SELECT COUNT(*)*0.5 
+     FROM Factura f2 
+     WHERE YEAR(f2.fact_fecha)=2011 and f2.fact_vendedor in (SELECT e1.empl_codigo 
+                                                            FROM Empleado e1 
+                                                            WHERE e1.empl_jefe=e.empl_codigo))
+END) PUNTAJE_2011,
+(CASE 
+WHEN (SELECT COUNT(*) 
+      FROM Factura f
+      WHERE f.fact_vendedor=e.empl_codigo AND YEAR(f.fact_fecha)=2012) >=50
+THEN (SELECT COUNT(*) 
+      FROM Factura f1 
+      WHERE e.empl_codigo=f1.fact_vendedor and YEAR(f1.fact_fecha)=2012 and f1.fact_total>100)
+ELSE(SELECT COUNT(*)*0.5 
+     FROM Factura f2 
+     WHERE YEAR(f2.fact_fecha)=2012 and f2.fact_vendedor in (SELECT e1.empl_codigo 
+                                                            FROM Empleado e1 
+                                                            WHERE e1.empl_jefe=e.empl_codigo))
+END) PUNTAJE_2012
+FROM Empleado e
+ORDER BY 5 DESC
+
+/*21. Escriba una consulta sql que retorne para todos los años, en los cuales se haya hecho al
+menos una factura, la cantidad de clientes a los que se les facturo de manera incorrecta 
+al menos una factura y que cantidad de facturas se realizaron de manera incorrecta. Se
+considera que una factura es incorrecta cuando la diferencia entre el total de la factura
+menos el total de impuesto tiene una diferencia mayor a $ 1 respecto a la sumatoria de
+los costos de cada uno de los items de dicha factura. Las columnas que se deben mostrar
+son:
+ Año
+ Clientes a los que se les facturo mal en ese año
+ Facturas mal realizadas en ese año*/
+
+SELECT 
+YEAR(ti.fact_fecha) AÑO,
+COUNT(DISTINCT ti.fact_cliente) CLIENTES_MAL_FACTURADOS,
+COUNT(*) FACTURAS_INCORRECTAS
+FROM (SELECT 
+      fact_cliente,
+      fact_fecha,
+      fact_sucursal,
+      fact_tipo,
+      fact_numero
+     FROM Factura JOIN Item_Factura on fact_sucursal+fact_tipo+fact_numero=item_sucursal+item_tipo+item_numero
+     GROUP BY fact_cliente,fact_fecha,fact_sucursal,fact_tipo,fact_numero,fact_total,fact_total_impuestos
+     HAVING (fact_total-fact_total_impuestos) NOT BETWEEN SUM(item_cantidad*item_precio)-1
+                                             AND SUM(item_cantidad*item_precio)+1) ti --tabla de facturas incorrectas y clientes mal facturados
+GROUP BY YEAR(ti.fact_fecha)

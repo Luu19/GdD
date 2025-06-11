@@ -658,3 +658,23 @@ FROM PRODUCTOS_COMPUESTOS_MAS_VENDIDOS_POR_ANIO T1
 GROUP BY T1.ANIO,T1.PROD,T2.CANT_COMPONENTES,T3.CANT_FACTURAS,T4.CLIENTE,T5.VENTA_ANUAL
 ORDER BY T5.VENTA_ANUAL DESC
 
+/*24. Escriba una consulta que considerando solamente las facturas correspondientes a los
+dos vendedores con mayores comisiones, retorne los productos con composición
+facturados al menos en cinco facturas,
+La consulta debe retornar las siguientes columnas:
+ Código de Producto
+ Nombre del Producto
+ Unidades facturadas
+El resultado deberá ser ordenado por las unidades facturadas descendente.*/
+
+SELECT p.prod_codigo, p.prod_detalle, SUM(i.item_cantidad) UNIDADES_FACTURADAS
+FROM Item_Factura i 
+     JOIN Factura f on i.item_sucursal+i.item_tipo+i.item_numero=f.fact_sucursal+f.fact_tipo+f.fact_numero
+     JOIN Producto p on p.prod_codigo=i.item_producto
+WHERE (f.fact_vendedor) in (SELECT TOP 2 e1.empl_codigo
+                            FROM Empleado e1 
+                            ORDER BY e1.empl_comision DESC)
+      AND (i.item_producto) in (SELECT DISTINCT comp_producto FROM Composicion)
+GROUP BY p.prod_codigo, p.prod_detalle
+HAVING COUNT(DISTINCT f.fact_sucursal+f.fact_tipo+f.fact_numero) >= 5
+ORDER BY SUM(i.item_cantidad) DESC

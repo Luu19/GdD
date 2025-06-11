@@ -595,7 +595,7 @@ ORDER BY r.rubr_detalle ASC, COUNT(DISTINCT f.fact_sucursal+f.fact_tipo+f.fact_n
 del año.
 El resultado deberá ser ordenado por el total vendido por año en forma descendente.*/
 
-WITH PRODUCTOS_CON_COMPOSICION 
+WITH PRODUCTOS_CON_COMPOSICION --ACA CALCULO QUE SERIA MEJOR HACER TABLAS TEMPORALES, PERO NU SE
 AS (SELECT DISTINCT comp_producto PROD_COMPUESTO FROM Composicion),
 
 VENTA_ANUAL_POR_PRODUCTO 

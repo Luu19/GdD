@@ -545,3 +545,116 @@ FROM (SELECT
      HAVING (fact_total-fact_total_impuestos) NOT BETWEEN SUM(item_cantidad*item_precio)-1
                                              AND SUM(item_cantidad*item_precio)+1) ti --tabla de facturas incorrectas y clientes mal facturados
 GROUP BY YEAR(ti.fact_fecha)
+
+/*22. Escriba una consulta sql que retorne una estadistica de venta para todos los rubros por
+trimestre contabilizando todos los años. Se mostraran como maximo 4 filas por rubro (1
+por cada trimestre).
+Se deben mostrar 4 columnas:
+ Detalle del rubro
+ Numero de trimestre del año (1 a 4)
+ Cantidad de facturas emitidas en el trimestre en las que se haya vendido al
+menos un producto del rubro
+ Cantidad de productos diferentes del rubro vendidos en el trimestre
+El resultado debe ser ordenado alfabeticamente por el detalle del rubro y dentro de cada
+rubro primero el trimestre en el que mas facturas se emitieron.
+No se deberan mostrar aquellos rubros y trimestres para los cuales las facturas emitiadas
+no superen las 100.
+En ningun momento se tendran en cuenta los productos compuestos para esta
+estadistica.*/
+
+SELECT 
+r.rubr_detalle DETALLE_RUBRO,
+TRIMESTRE = CASE
+            WHEN MONTH(f.fact_fecha) BETWEEN 1 AND 3 THEN 1
+            WHEN MONTH(f.fact_fecha) BETWEEN 4 AND 6 THEN 2
+            WHEN MONTH(f.fact_fecha) BETWEEN 7 AND 9 THEN 3
+            WHEN MONTH(f.fact_fecha) BETWEEN 10 AND 12 THEN 4
+            END,
+COUNT(DISTINCT f.fact_sucursal+f.fact_tipo+f.fact_numero) FACTURAS_EMITIDAS,
+COUNT(DISTINCT p.prod_codigo) PRODUCTOS_DISTINTOS_VENDIDOS
+FROM Rubro r JOIN Producto p on r.rubr_id=p.prod_rubro
+             JOIN Item_Factura i on i.item_producto=p.prod_codigo
+             JOIN Factura f on f.fact_sucursal+f.fact_tipo+f.fact_numero=i.item_sucursal+i.item_tipo+i.item_numero
+WHERE p.prod_codigo not in (SELECT comp_producto FROM Composicion)
+GROUP BY r.rubr_detalle, YEAR(f.fact_fecha), CASE
+            WHEN MONTH(f.fact_fecha) BETWEEN 1 AND 3 THEN 1
+            WHEN MONTH(f.fact_fecha) BETWEEN 4 AND 6 THEN 2
+            WHEN MONTH(f.fact_fecha) BETWEEN 7 AND 9 THEN 3
+            WHEN MONTH(f.fact_fecha) BETWEEN 10 AND 12 THEN 4
+            END
+HAVING COUNT(DISTINCT f.fact_sucursal+f.fact_tipo+f.fact_numero)>100
+ORDER BY r.rubr_detalle ASC, COUNT(DISTINCT f.fact_sucursal+f.fact_tipo+f.fact_numero) DESC
+
+/*23. Realizar una consulta SQL que para cada año muestre :
+ Año
+ El producto con composición más vendido para ese año.
+ Cantidad de productos que componen directamente al producto más vendido
+ La cantidad de facturas en las cuales aparece ese producto.
+ El código de cliente que más compro ese producto.
+ El porcentaje que representa la venta de ese producto respecto al total de venta
+del año.
+El resultado deberá ser ordenado por el total vendido por año en forma descendente.*/
+
+WITH PRODUCTOS_CON_COMPOSICION 
+AS (SELECT DISTINCT comp_producto PROD_COMPUESTO FROM Composicion),
+
+VENTA_ANUAL_POR_PRODUCTO 
+AS (SELECT item_producto PROD, SUM(item_cantidad*item_precio) VENTA_ANUAL,YEAR(fact_fecha) ANIO
+    FROM Factura JOIN Item_Factura on fact_sucursal+fact_tipo+fact_numero=item_sucursal+item_tipo+item_numero
+    WHERE item_producto in  (SELECT PROD_COMPUESTO FROM PRODUCTOS_CON_COMPOSICION)
+    GROUP BY item_producto,YEAR(fact_fecha)),
+
+PRODUCTOS_COMPUESTOS_MAS_VENDIDOS_POR_ANIO
+AS (SELECT 
+    (SELECT TOP 1 PROD FROM VENTA_ANUAL_POR_PRODUCTO VA1 WHERE VA1.ANIO=VA.ANIO ORDER BY VENTA_ANUAL DESC) PROD, 
+    VA.ANIO,
+    (SELECT TOP 1 VA2.VENTA_ANUAL
+     FROM VENTA_ANUAL_POR_PRODUCTO VA2
+     WHERE VA2.ANIO = VA.ANIO
+     ORDER BY VA2.VENTA_ANUAL DESC) VENTA_ANUAL
+    FROM VENTA_ANUAL_POR_PRODUCTO VA),
+
+CANTIDAD_COMPONENTES_POR_PRODUCTO_COMPUESTO
+AS (SELECT comp_producto PROD_COMP, COUNT(DISTINCT comp_componente) CANT_COMPONENTES
+    FROM Composicion
+    GROUP BY comp_producto
+    ),
+
+CANTIDAD_FACTURAS_POR_PRODUCTO
+AS (SELECT item_producto PROD, COUNT(DISTINCT fact_sucursal+fact_tipo+fact_numero) CANT_FACTURAS, YEAR(fact_fecha) ANIO
+    FROM Factura JOIN Item_Factura on fact_sucursal+fact_tipo+fact_numero=item_sucursal+item_tipo+item_numero
+    GROUP BY item_producto,YEAR(fact_fecha)),
+
+CLIENTES_QUE_MAS_COMPRARON
+AS (SELECT DISTINCT
+    (SELECT TOP 1 f1.fact_cliente
+     FROM Factura f1 JOIN Item_Factura i1 on f1.fact_sucursal+f1.fact_tipo+f1.fact_numero=i1.item_sucursal+i1.item_tipo+i1.item_numero
+     WHERE i1.item_producto = i.item_producto AND YEAR(f1.fact_fecha)=YEAR(f.fact_fecha)
+     GROUP BY f1.fact_cliente
+     ORDER BY SUM(item_cantidad) DESC) CLIENTE, 
+     i.item_producto PRODUCTO,
+     YEAR(f.fact_fecha) ANIO
+    FROM Factura f JOIN Item_Factura i on f.fact_sucursal+f.fact_tipo+f.fact_numero=i.item_sucursal+i.item_tipo+i.item_numero
+    GROUP BY YEAR(f.fact_fecha), i.item_producto
+    ),
+
+VENTAS_ANUALES
+AS (SELECT YEAR(fact_fecha) ANIO, SUM(item_cantidad*item_precio) VENTAS_TOTALES
+    FROM Factura JOIN Item_Factura on fact_sucursal+fact_tipo+fact_numero=item_sucursal+item_tipo+item_numero
+    GROUP BY YEAR(fact_fecha))
+
+SELECT
+T1.ANIO AÑO,
+T1.PROD PROD_COMP_MAS_VENDIDO,
+T2.CANT_COMPONENTES CANTIDAD_COMPONENTES,
+T3.CANT_FACTURAS CANTIDAD_FACTURAS,
+T4.CLIENTE CLIENTE_QUE_MAS_COMPRO,
+(T5.VENTA_ANUAL*100)/(SELECT VENTAS_TOTALES FROM VENTAS_ANUALES VA WHERE VA.ANIO=T1.ANIO) PORCENTAJE_VENTAS
+FROM PRODUCTOS_COMPUESTOS_MAS_VENDIDOS_POR_ANIO T1
+     JOIN CANTIDAD_COMPONENTES_POR_PRODUCTO_COMPUESTO T2 ON T1.PROD=T2.PROD_COMP
+     JOIN CANTIDAD_FACTURAS_POR_PRODUCTO T3 ON T3.PROD=T1.PROD AND T3.ANIO=T1.ANIO
+     JOIN CLIENTES_QUE_MAS_COMPRARON T4 ON T4.PRODUCTO=T1.PROD AND T4.ANIO=T1.ANIO
+     JOIN VENTA_ANUAL_POR_PRODUCTO T5 ON T1.PROD=T5.PROD AND T1.ANIO=T5.ANIO
+GROUP BY T1.ANIO,T1.PROD,T2.CANT_COMPONENTES,T3.CANT_FACTURAS,T4.CLIENTE,T5.VENTA_ANUAL
+ORDER BY T5.VENTA_ANUAL DESC
+

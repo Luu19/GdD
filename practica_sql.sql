@@ -738,3 +738,39 @@ WHERE p.prod_familia = (SELECT TOP 1 P1.prod_familia --mejor poner el filtro de 
                         ORDER BY SUM(I1.item_cantidad) DESC)
 GROUP BY YEAR(f.fact_fecha), p.prod_familia
 ORDER BY SUM(i.item_cantidad*i.item_precio), 2 DESC
+
+/*26. Escriba una consulta sql que retorne un ranking de empleados devolviendo las
+siguientes columnas:
+ Empleado
+ Depósitos que tiene a cargo
+ Monto total facturado en el año corriente
+ Codigo de Cliente al que mas le vendió
+ Producto más vendido
+ Porcentaje de la venta de ese empleado sobre el total vendido ese año.
+Los datos deberan ser ordenados por venta del empleado de mayor a menor.*/
+
+SELECT 
+e.empl_codigo, 
+COUNT(DISTINCT d.depo_codigo) DEPOSITOS_A_CARGO,
+(SELECT SUM(f6.fact_total) FROM Factura f6 WHERE f6.fact_vendedor=f.fact_vendedor AND YEAR(f6.fact_fecha)=YEAR(f.fact_fecha)) MONTO_FACTURADO,
+(SELECT TOP 1 f2.fact_cliente
+FROM Factura f2
+WHERE YEAR(f.fact_fecha)=YEAR(f2.fact_fecha) AND f2.fact_vendedor=f.fact_vendedor
+GROUP BY f2.fact_cliente
+ORDER BY SUM(f2.fact_total) DESC
+) CLIENTE_AL_QUE_MAS_LE_VENDIO,
+(SELECT TOP 1 i3.item_producto
+FROM Item_Factura i3 JOIN Factura f3 on f3.fact_sucursal+f3.fact_tipo+f3.fact_numero=i3.item_sucursal+i3.item_tipo+i3.item_numero
+WHERE f.fact_vendedor=f3.fact_vendedor AND YEAR(f.fact_fecha)=YEAR(f3.fact_fecha)
+GROUP BY i3.item_producto
+ORDER BY SUM(i3.item_cantidad) DESC) PRODUCTO_MAS_VENDIDO,
+(((SELECT SUM(f5.fact_total) FROM Factura f5 WHERE YEAR(f5.fact_fecha)=YEAR(f.fact_fecha) AND f5.fact_vendedor=f.fact_vendedor)*100)/(SELECT SUM(f4.fact_total) FROM Factura f4 WHERE YEAR(f4.fact_fecha)=YEAR(f.fact_fecha))) PORCENTAJE_DE_VENTA
+FROM Empleado e 
+    LEFT JOIN DEPOSITO d on d.depo_encargado=e.empl_codigo --LEFT JOIN POR SI HAY EMPLEADOS QUE NO ESTAN A CARGO DE DEPOSITOS O QUE NO HAYAN FACTURADO
+    LEFT JOIN Factura f on f.fact_vendedor=e.empl_codigo
+WHERE YEAR(f.fact_fecha)=(SELECT TOP 1 YEAR(f1.fact_fecha) FROM Factura f1 ORDER BY YEAR(f1.fact_fecha) DESC)
+GROUP BY e.empl_codigo, YEAR(f.fact_fecha), f.fact_vendedor
+ORDER BY (SELECT SUM(f5.fact_total) FROM Factura f5 WHERE YEAR(f5.fact_fecha)=YEAR(f.fact_fecha) AND f5.fact_vendedor=f.fact_vendedor) DESC
+
+
+

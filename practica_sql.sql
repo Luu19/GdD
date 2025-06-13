@@ -772,5 +772,40 @@ WHERE YEAR(f.fact_fecha)=(SELECT TOP 1 YEAR(f1.fact_fecha) FROM Factura f1 ORDER
 GROUP BY e.empl_codigo, YEAR(f.fact_fecha), f.fact_vendedor
 ORDER BY (SELECT SUM(f5.fact_total) FROM Factura f5 WHERE YEAR(f5.fact_fecha)=YEAR(f.fact_fecha) AND f5.fact_vendedor=f.fact_vendedor) DESC
 
+/*27. Escriba una consulta sql que retorne una estadística basada en la facturacion por año y
+envase devolviendo las siguientes columnas:
+ Año
+ Codigo de envase
+ Detalle del envase
+ Cantidad de productos que tienen ese envase
+ Cantidad de productos facturados de ese envase
+ Producto mas vendido de ese envase
+ Monto total de venta de ese envase en ese año
+ Porcentaje de la venta de ese envase respecto al total vendido de ese año
+Los datos deberan ser ordenados por año y dentro del año por el envase con más
+facturación de mayor a menor*/
 
+SELECT 
+YEAR(f.fact_fecha) AÑO,
+e.enva_codigo CODIGO_ENVASE,
+e.enva_detalle DETALLE_ENVASE,
+COUNT(DISTINCT p.prod_codigo) CANTIDAD_DE_PRODUCTOS_QUE_LO_UTILIZAN,
+SUM(ISNULL(i.item_cantidad,0)) CANTIDAD_DE_PRODUCTOS_FACTURADOS,
+(SELECT TOP 1 i2.item_producto
+FROM Item_Factura i2 
+     JOIN Factura f2 on f2.fact_sucursal+f2.fact_tipo+f2.fact_numero=i2.item_sucursal+i2.item_tipo+i2.item_numero
+     JOIN Producto p2 on p2.prod_codigo=i2.item_producto
+WHERE YEAR(f2.fact_fecha)=YEAR(f.fact_fecha) AND p2.prod_envase=e.enva_codigo
+GROUP BY i2.item_producto
+ORDER BY SUM(i2.item_cantidad) DESC) PRODUCTO_MAS_VENDIDO,
+SUM(i.item_cantidad*i.item_precio) VENTA_ANUAL_ENVASE,
+((SUM(i.item_cantidad*i.item_precio))*100/(SELECT SUM(f3.fact_total) 
+                                           FROM Factura f3 
+                                           WHERE YEAR(f3.fact_fecha)=YEAR(f.fact_fecha))) PORCENTAJE_DE_VENTAS
+FROM Envases e 
+     LEFT JOIN Producto p on e.enva_codigo=p.prod_envase
+     LEFT JOIN Item_Factura i on i.item_producto=p.prod_codigo
+     JOIN Factura f on f.fact_sucursal+f.fact_tipo+f.fact_numero=i.item_sucursal+i.item_tipo+i.item_numero
+GROUP BY YEAR(f.fact_fecha), e.enva_codigo, e.enva_detalle
+ORDER BY 1, 7 DESC  
 

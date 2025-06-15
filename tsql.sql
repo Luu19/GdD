@@ -395,4 +395,105 @@ BEGIN
 END
 GO
 
--- El 9  es un trigger
+/*
+9. Crear el/los objetos de base de datos que ante alguna modificación de un ítem de
+factura de un artículo con composición realice el movimiento de sus
+correspondientes componentes.
+*/
+/*
+CREATE TRIGGER NombreDelTrigger
+ON NombreTabla
+FOR [INSERT, UPDATE, DELETE]  -- Podés poner uno, dos o los tres eventos
+AS
+BEGIN
+    -- Lógica del trigger (puede ser un SELECT, UPDATE, PRINT, ROLLBACK, etc.)
+END
+GO
+*/
+
+create trigger ejercicio9
+on Item_Factura
+for INSERT, UPDATE, DELETE
+as
+begin
+	declare @producto_codigo char(8)
+	declare @producto_componente char(8)
+	declare @cantidad_prod decimal(12,0)
+	declare @depo_codigo char(8)
+
+
+	if (select count(*) from inserted 
+			where item_producto in (select comp_producto from Composicion)) > 0
+	begin
+		declare cursor_item cursor for 
+			select
+				item_producto,
+				comp_componente,
+				comp_cantidad * item_cantidad,
+				RIGHT(item_sucursal,2)
+			from inserted
+			join Composicion on comp_producto = item_producto
+			/*join Factura f on f.fact_tipo = item_tipo
+                   and f.fact_numero = item_numero
+                   and f.fact_sucursal = item_sucursal*/
+		open cursor_item
+		fetch next from cursor_items into @producto_codigo, @producto_componente, @cantidad_prod, @depo_codigo
+		while @@FETCH_STATUS = 0
+		begin  
+			update STOCK
+			set stoc_cantidad = stoc_cantidad - @cantidad_prod
+			where stoc_producto = @producto_componente and stoc_deposito = @depo_codigo
+		fetch next from cursor_items into @producto_codigo, @producto_componente, @cantidad_prod, @depo_codigo
+		end
+		close cursor_item
+		deallocate cursor_item
+	end
+	else
+	-- delete
+		if (select count(*) from deleted 
+			where item_producto in (select comp_producto from Composicion)) > 0
+		begin
+			declare cursor_item cursor for 
+			select
+				item_producto,
+				comp_componente,
+				comp_cantidad * item_cantidad,
+				RIGHT(item_sucursal,2)
+			from deleted
+			join Composicion on comp_producto = item_producto
+			/*join Factura f on f.fact_tipo = item_tipo
+                   and f.fact_numero = item_numero
+                   and f.fact_sucursal = item_sucursal*/
+			open cursor_item
+			fetch next from cursor_items into @producto_codigo, @producto_componente, @cantidad_prod, @depo_codigo
+			while @@FETCH_STATUS = 0
+			begin  
+				update STOCK
+				set stoc_cantidad = stoc_cantidad + @cantidad_prod
+				where stoc_producto = @producto_componente and stoc_deposito = @depo_codigo
+			fetch next from cursor_items into @producto_codigo, @producto_componente, @cantidad_prod, @depo_codigo
+			end
+			close cursor_item
+			deallocate cursor_item
+	end
+end
+go
+
+/*
+10. Crear el/los objetos de base de datos que ante el intento de borrar un artículo
+verifique que no exista stock y si es así lo borre en caso contrario que emita un
+mensaje de error.
+*/
+CREATE TRIGGER ejercicio10
+ON Producto
+FOR DELETE  
+AS
+BEGIN
+
+    if exists (select 1 from STOCK join deleted on prod_codigo = stoc_producto  where stoc_cantidad > 0)
+	begin
+		return 'ERROR: El producto aún tiene STOCK'
+		rollback transaction
+	end
+END
+GO

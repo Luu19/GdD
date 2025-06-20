@@ -497,3 +497,92 @@ BEGIN
 	end
 END
 GO
+
+/*
+11. Cree el/los objetos de base de datos necesarios para que dado un código de
+empleado se retorne la cantidad de empleados que este tiene a su cargo (directa o
+indirectamente). Solo contar aquellos empleados (directos o indirectos) que
+tengan un código mayor que su jefe directo.
+*/
+CREATE FUNCTION dbo.Ejercicio11(@codigo_empleado CHAR(6))
+RETURNS int
+AS
+BEGIN
+	declare @total int
+	declare @empleado CHAR(6)
+	
+	set @total = 0
+
+	if exists(select 1 from Empleado where empl_jefe = @codigo_empleado)
+	begin
+		declare cursor_empleado cursor for
+			select empl_codigo from Empleado where empl_jefe = @codigo_empleado and empl_codigo > @codigo_empleado
+		open cursor_empleado
+		fetch next from cursor_empleado into @empleado
+		while @@FETCH_STATUS = 0
+		begin
+			set @total = @total + 1
+			set @total = @total + dbo.Ejercicio11(@empleado)
+			fetch next from cursor_empleado into @empleado
+		end
+		close cursor_empleado
+		deallocate cursor_empleado
+	end
+	else
+	begin
+		return @total
+	end
+RETURN 0
+END
+GO
+
+/*
+12. Cree el/los objetos de base de datos necesarios para que nunca un producto
+pueda ser compuesto por sí mismo. Se sabe que en la actualidad dicha regla se
+cumple y que la base de datos es accedida por n aplicaciones de diferentes tipos
+y tecnologías. No se conoce la cantidad de niveles de composición existentes.
+*/
+CREATE FUNCTION dbo.estaCompuestoPorSiMismo(@prod_codigo char(8), @comp_componente char(8))
+RETURNS int
+AS
+BEGIN
+	declare @prod_codigo_aux char(8)
+
+	if @prod_codigo = @comp_componente
+	begin
+		return 1
+	end
+	else
+	begin
+		declare cursor_compuestos cursor for
+		select comp_componente from Composicion where comp_producto = @comp_componente
+		open cursor_compuestos
+		fetch next from cursor_compuestos into @prod_codigo_aux
+		while @@FETCH_STATUS = 0
+		begin
+			if dbo.estaCompuestoPorSiMismo(@prod_codigo, @prod_codigo_aux) = 1
+			begin
+				return 1
+			end
+		fetch next from cursor_compuestos into @prod_codigo_aux
+		end
+		close cursor_compuestos
+		deallocate cursor_compuestos
+	end
+RETURN 0
+END
+GO
+
+CREATE TRIGGER ejercicio12
+ON Composicion
+FOR insert  
+AS
+BEGIN
+	
+	if (select sum(dbo.estaCompuestoPorSiMismo(comp_producto, comp_cantidad)) from inserted) > 1
+	begin
+		return 'ERROR'
+		rollback transaction
+	end
+END
+GO

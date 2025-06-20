@@ -1,8 +1,8 @@
---GUÍA T-SQL--
+--GUÃA T-SQL--
 --EJERCICIO 1--
-/* Hacer una función que dado un artículo y un deposito devuelva un string que indique el estado del depósito 
-según el artículo. Si la cantidad almacenada es menor al límite retornar “OCUPACION DEL DEPOSITO XX %” siendo
-XX el % de ocupación. Si la cantidad almacenada es mayor o igual al límite retornar “DEPOSITO COMPLETO”. 
+/* Hacer una funciÃ³n que dado un artÃ­culo y un deposito devuelva un string que indique el estado del depÃ³sito 
+segÃºn el artÃ­culo. Si la cantidad almacenada es menor al lÃ­mite retornar â€œOCUPACION DEL DEPOSITO XX %â€ siendo
+XX el % de ocupaciÃ³n. Si la cantidad almacenada es mayor o igual al lÃ­mite retornar â€œDEPOSITO COMPLETOâ€. 
 */
  alter function ejercicio1 (@articulo char(8) , @deposito char(2))
  returns varchar(50)
@@ -13,7 +13,7 @@ XX el % de ocupación. Si la cantidad almacenada es mayor o igual al límite retor
   if @stock >= @maximo or @maximo = 0
 	return 'DEPOSITO COMPLETO' 
   	/*sin ELSE*/
-	return 'OCUPACIÓN DEL DEPÓSITO ' + @deposito +' '+STR(@stock / @maximo * 100,5,2) --string de 5 posiciones y 2 decimales
+	return 'OCUPACIÃ“N DEL DEPÃ“SITO ' + @deposito +' '+STR(@stock / @maximo * 100,5,2) --string de 5 posiciones y 2 decimales
 	end
   go
 
@@ -25,7 +25,7 @@ XX el % de ocupación. Si la cantidad almacenada es mayor o igual al límite retor
   order by 1
 
   --EJERCICIO 2--
-  /*Realizar una función que dado un artículo y una fecha, retorne el stock que existía a esa fecha */
+  /*Realizar una funciÃ³n que dado un artÃ­culo y una fecha, retorne el stock que existÃ­a a esa fecha */
    create or alter function ejercicio2 (@articulo char(8) , @fecha datetime)
    returns numeric(12,2)
    as begin 
@@ -87,12 +87,65 @@ END
 
 GO
 
+--EJERCICIO 3--
+/* Cree el/los objetos de base de datos necesarios para corregir la tabla empleado en caso que sea necesario.
+Se sabe que deberÃ­a existir un Ãºnico gerente general (deberÃ­a ser el Ãºnico empleado sin jefe). 
+Si detecta que hay mÃ¡s de un empleado sin jefe deberÃ¡ elegir entre ellos el gerente general, el cual 
+serÃ¡ seleccionado por mayor salario. Si hay mÃ¡s de uno se seleccionara el de mayor antigÃ¼edad en la empresa. 
+Al finalizar la ejecuciÃ³n del objeto la tabla deberÃ¡ cumplir con la regla de un Ãºnico empleado sin jefe 
+(el gerente general) y deberÃ¡ retornar la cantidad de empleados que habÃ­a sin jefe antes de la ejecuciÃ³n.  */
+
+create procedure ejercicio3
+as 
+	begin
+	declare @jefe numeric(6)
+	if(select count(*) from Empleado where empl_jefe is null) > 1
+		select top 1 @jefe = empl_codigo from Empleado 
+		where empl_jefe is null
+		order by empl_salario desc, empl_ingreso
+		update Empleado set empl_jefe = @jefe
+		where empl_jefe is null and empl_codigo <> @jefe
+	end
+go
+
+--EJERCICIO 4--
+/*Cree el/los objetos de base de datos necesarios para actualizar la columna de 
+empleado empl_comision con la sumatoria del total de lo vendido por ese 
+empleado a lo largo del Ãºltimo aÃ±o. Se deberÃ¡ retornar el cÃ³digo del vendedor 
+que mÃ¡s vendiÃ³ (en monto) a lo largo del Ãºltimo aÃ±o. */
+
+create proc ejercicio4(@vendedorMas numeric(6) OUTPUT)
+as begin
+
+	update Empleado set empl_comision = (select sum(distinct fact_total) from Factura										
+										where year(fact_fecha) = (select year(max(fact_fecha)) from Factura)
+										and fact_vendedor = empleado.empl_codigo
+										group by fact_vendedor)
+	select top 1 @vendedorMas = empl_codigo from Empleado 
+	order by empl_comision desc	
+	end
+go
 
 
-	--EJERCICIO 3--
-/* Cree el/los objetos de base de datos necesarios para corregir la tabla empleado en caso que sea necesario. Se sabe que debería existir un único 
-gerente general (debería ser el único empleado sin jefe). Si detecta que hay más de un empleado sin jefe deberá elegir entre ellos el gerente general, el 
-cual será seleccionado por mayor salario. Si hay más de uno se seleccionara el de mayor antigüedad en la empresa. Al finalizar la ejecución 
-del objeto la tabla deberá cumplir con la regla de un único empleado sin jefe (el gerente general) y deberá retornar la cantidad de empleados que había 
-sin jefe antes de la ejecución.  */
+--EJERCICIO 5--
+/*Realizar un procedimiento que complete con los datos existentes en el modelo 
+provisto la tabla de hechos denominada Fact_table tiene las siguiente definiciÃ³n: 
+*/
+
+create or alter proc ejercicio5 as 
+	begin
+	Create table Fact_tablev1
+	(anio char(4) not null, mes char(2) not null, familia char(3) not null, rubro char(4) not null, zona char(3) not null, cliente char(6) not null, producto char(8) not null, 
+	cantidad decimal(12,2) not null, monto decimal(12,2) not null ) 
+	Alter table Fact_table 
+	Add constraint Pk_fact primary key(anio,mes,familia,rubro,zona,cliente,producto) --?
+	insert into Fact_tablev1(anio, mes, familia, rubro, zona, cliente, producto, cantidad, monto)
+		select year(fact_fecha), month(fact_fecha), prod_familia,prod_rubro, fact_sucursal , clie_codigo, prod_codigo,item_cantidad, item_cantidad * item_precio from Factura
+		join Item_Factura on item_numero + item_sucursal + item_tipo = fact_numero + fact_sucursal + fact_tipo
+		join Producto on prod_codigo = item_producto
+		join Cliente on clie_codigo = fact_cliente
+	end
+go
+
+exec ejercicio5;
 

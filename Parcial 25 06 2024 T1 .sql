@@ -1,27 +1,33 @@
-USE GD2015C1
+-- Parcial 25 06 2024
+use GD2015C1
 /*
-	Sabiendo que si un producto no es vendido en un depósito determinado entonces no
-	posee registros en él
-	Se requiere una consulta SQL que para todos los productos que se quedaron sin stock
-	en un depósito (cantidad 0 o nula) y poseen un stock mayor al punto de resposición en otro
-	depósito, devuelva:
-		- Código de producto
-		- Detalle del producto
-		- Domicilio del depósito sin stock
-		- Cantidad de depósitos con un stock superior añ punto de reposición
-	La consulta debe ser ordenada por código de producto
+	Sabiendo que si un producto no es vendido en un deposito determinado entonces no posee registros en él.
+	Se requiere una consulta SQL que para todos los productos que se quedaron sin stock en un depósito (cantidad 0
+	o nula) y poseen un stock mayor al punto de reposición en otro dispositivo devuelva:
+		1. Código de producto
+		2. Detalle del producto
+		3. Domicilio del depósito sin stock
+		4. Cantidad de depósitos con un stock superior al punto de reposición
+	La consulta debe ser ordenada x el código del producto
 */
 select
 	p.prod_codigo,
 	p.prod_detalle,
 	d.depo_domicilio,
-	(select count(*) from STOCK where stoc_cantidad > stoc_punto_reposicion and stoc_producto = p.prod_codigo and stoc_deposito = d.depo_codigo)
+	(
+        SELECT COUNT(*)
+        FROM STOCK s2
+        WHERE s2.stoc_producto = p.prod_codigo
+          AND s2.stoc_deposito <> d.depo_codigo
+          AND s2.stoc_cantidad > s2.stoc_punto_reposicion
+    ) AS cant_depositos_superior_reposicion
 from Producto p
 left join STOCK s on s.stoc_producto = p.prod_codigo
 join DEPOSITO d on d.depo_codigo = s.stoc_deposito
-where (s.stoc_cantidad = 0 or s.stoc_cantidad = NULL) 
-	and p.prod_codigo in 
-	(select stoc_producto from STOCK where stoc_cantidad > stoc_punto_reposicion and stoc_deposito <> d.depo_codigo)
+where (s.stoc_cantidad = 0 or s.stoc_cantidad = null) and p.prod_codigo in 
+	(
+		select s2.stoc_producto from STOCK s2 where s2.stoc_cantidad > s2.stoc_punto_reposicion and s2.stoc_deposito <> d.depo_codigo
+	)
 order by p.prod_codigo
 
 /*
@@ -29,7 +35,7 @@ order by p.prod_codigo
 	permita vender un producto a un precio que no esté entre 0%-5% del precio de venta
 	del producto el mes anterior, ni tampoco que esté en más de un 50% el precio del mismo
 	producto que hace 12 meses atrás. Aquellos productos nuevos, o que no tuvieron ventas en 
-	meses anteriores no debe considerar esta regla ya que no hay precio de referencia
+	meses anteriores no debe considerar esta regla ya que no hay precio de referencia 
 */
 GO
 CREATE TRIGGER validacion_precio

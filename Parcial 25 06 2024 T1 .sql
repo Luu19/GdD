@@ -15,7 +15,7 @@ select
 	p.prod_detalle,
 	d.depo_domicilio,
 	(
-        SELECT COUNT(*)
+        SELECT COUNT(distinct s2.stoc_deposito)
         FROM STOCK s2
         WHERE s2.stoc_producto = p.prod_codigo
           AND s2.stoc_deposito <> d.depo_codigo

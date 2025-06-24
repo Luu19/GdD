@@ -94,6 +94,7 @@ order by p.prod_codigo
 	límite crediticio menos a $15000
 */
 
+-- Esto es por si pide que haya al menos un producto con rubro pilas o pastillas
 GO
 CREATE TRIGGER sorpresa_de_compra
 ON Item_Factura
@@ -109,7 +110,36 @@ BEGIN
 		where  rubr_detalle IN ('PILAS', 'PASTILLAS') and clie_limite_credito < 15000
 	)
 	begin
-		print 'Recuerde solicitar su regalo sorpresa en su próxima compra'
+		print 'Ud. accedera a un 5% de descuento del total de su proxima factura'
+	end
+END
+GO 
+-- Y esto es que pide que haya (en la misma factura) un producto con rubro pila y otro pastilla
+GO
+CREATE TRIGGER sorpresa_de_compra
+ON Item_Factura
+FOR INSERT 
+AS
+BEGIN
+	if exists (
+		select 1 from inserted i
+		join Factura on fact_numero+fact_sucursal+fact_tipo = item_numero+item_sucursal+item_tipo
+		join Cliente on clie_codigo = fact_cliente
+		where clie_limite_credito < 15000 and
+		exists (
+			select 1 from Item_Factura i1
+			join Producto on prod_codigo = item_producto
+			join Rubro on rubr_id = prod_rubro
+			where  rubr_detalle = 'PILAS'and item_numero+item_sucursal+item_tipo = i1.item_numero+i1.item_sucursal+i1.item_tipo
+		) and exists(
+			select 1 from Item_Factura i2
+			join Producto on prod_codigo = item_producto
+			join Rubro on rubr_id = prod_rubro
+			where  rubr_detalle = 'PASTILLAS' and item_numero+item_sucursal+item_tipo = i2.item_numero+i2.item_sucursal+i2.item_tipo
+		)
+	)
+	begin
+		print 'Ud. accedera a un 5% de descuento del total de su proxima factura'
 	end
 END
 GO 

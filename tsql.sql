@@ -586,3 +586,113 @@ BEGIN
 	end
 END
 GO
+-- EJERCICIOS DE PARCIALES DE TSQL
+/*
+	Para estimar el STOCK se necesita comprar de cada producto, se toma como estimación
+	las ventas de unidades promedio de los ultimos 3 meses anteriores a una fecha.
+	Se solicita que se guarde en una tabla (producto, cantidad a reponer) en función
+	del criterio antes mencionado y el stock existente
+*/
+
+go
+create procedure estimar_stock
+    @fecha smalldatetime
+as
+begin
+   /*
+		INSERT INTO nombre_tabla (columna1, columna2, ...) VALUES (valor1, valor2, ...)
+	*/
+	DECLARE @codigo CHAR(8)
+    DECLARE @reponer DECIMAL(12,2)
+	declare @stock_actual decimal(12, 2)
+
+	DECLARE cursor_productos CURSOR FOR
+        SELECT stoc_producto FROM STOCK group by stoc_producto
+    OPEN cursor_productos
+    FETCH NEXT FROM cursor_productos INTO @codigo
+	WHILE @@FETCH_STATUS = 0
+	begin
+		SELECT @stock_actual = SUM(stoc_cantidad)
+        FROM STOCK
+        WHERE stoc_producto = @codigo
+		set @reponer = 	(
+			select sum(item_cantidad) / isnull(count(distinct month(fact_fecha)), 1)
+			from Factura
+			join Item_Factura on item_numero+item_sucursal+item_tipo = fact_numero + fact_sucursal + fact_tipo
+			where (DATEDIFF(month, fact_fecha, @fecha) between 1 and 3) and item_producto = @codigo)
+		
+		set @reponer = case when (@reponer - @stock_actual) > 0 then (@reponer - @stock_actual) else 0
+		
+		insert stock_estimado (producto, cantidad_reponer) values (@codigo, @reponer)
+	FETCH NEXT FROM cursor_productos INTO @codigo
+    END
+    CLOSE cursor_productos
+    DEALLOCATE cursor_productos
+END
+GO
+
+/*
+	Se requiere realizar una verificación de los precios de los COMBOS para ello
+	se solicita que cree el o los objetos necesarios para realizar una operación
+	que 
+	actualice el precio de un producto compuesto (COMBO) 
+	es el 90% de la suma de los precios de sus componentes por las cantidades que los componen. 
+	
+	Se debe considerar que un producto puede estar compuesto por otros productos compuestos
+*/
+go
+CREATE FUNCTION dbo.precio_producto(@producto CHAR(8)) -- Precio de un producto / producto compuesto
+RETURNS decimal(12,2)
+AS
+BEGIN
+    declare @cantidad decimal(12,2), @precio decimal(12,2)
+    select @precio = 0
+	IF (select count(*) from composicion where comp_producto = @producto) = 0
+        return (select prod_precio from producto where prod_codigo = @producto)
+	BEGIN
+		DECLARE @ProdAux char(8)
+		DECLARE cursor_componente CURSOR FOR SELECT comp_componente, comp_cantidad
+										FROM Composicion
+										WHERE comp_producto = @producto 
+		OPEN cursor_componente
+		FETCH NEXT from cursor_componente INTO @ProdAux, @cantidad
+		WHILE @@FETCH_STATUS = 0
+			BEGIN
+				select @precio = @precio + @cantidad*dbo.precio_producto(@prodaux) 
+    			FETCH NEXT from cursor_componente INTO @ProdAux
+			END
+		CLOSE cursor_componente
+		DEALLOCATE cursor_componente
+		RETURN @precio
+	END
+END
+GO
+--------
+go
+create procedure verificar_precio_combos
+as
+begin
+	DECLARE @codigo CHAR(8)
+    DECLARE @precio DECIMAL(12,2)
+
+	DECLARE cursor_productos CURSOR FOR
+        SELECT prod_codigo FROM Producto
+    OPEN cursor_productos
+    FETCH NEXT FROM cursor_productos INTO @codigo
+	WHILE @@FETCH_STATUS = 0
+	begin
+		if(select count(*) from Composicion where comp_producto = @codigo) > 0
+		begin
+			set @precio = dbo.precio_producto(@codigo) * 0.9
+
+			UPDATE Producto
+			SET prod_precio = @precio
+			WHERE prod_codigo = @codigo 
+		end
+		
+	FETCH NEXT FROM cursor_productos INTO @codigo
+    END
+    CLOSE cursor_productos
+    DEALLOCATE cursor_productos
+END
+GO

@@ -815,3 +815,80 @@ begin
 
 end
 go
+
+---------
+/*
+	Se detectó un error en el proceso de registro de ventas, donde se almacenaron productos
+	compuestos en lugar de sus componentes individuales. Para solucionar este problema,
+	se debe:
+		1. Diseñar e implementrar los objetos necesarios para reorganizar las ventas
+		tal como están registradas actualmente
+		2. Desagregar los productos compuestos vendidos en sus componentes individuales,
+		asegurando que cada venta refleje correctamente los elementos que la componen
+		3. Garantizar que la base de datos quede consistente y alineada con las especificaciones
+		requeridas para el manejo de productos
+*/
+go
+create procedure desagregar_prod_compuestos
+as
+begin
+
+	declare @tipo char(1)
+	declare @sucursal char(4)
+	declare @nro char(8)
+	declare @producto char(8)
+	declare @precio decimal(12,2)
+	declare @fecha smalldatetime
+	declare @cantidad_compuesto int
+	declare @cantidad_item int
+
+	declare cursor_factura cursor for 
+    select item_tipo, item_sucursal, item_numero 
+    from Item_Factura
+    join Factura on fact_numero+fact_sucursal+fact_tipo = item_numero+item_sucursal+item_tipo
+	open cursor_factura
+	fetch next from cursor_factura into @tipo, @sucursal, @nro
+	while @@FETCH_STATUS = 0
+	begin  	
+		declare cursor_item cursor for 
+		select item_producto, item_precio, item_cantidad 
+		from Item_Factura
+		join Factura on fact_numero+fact_sucursal+fact_tipo = @tipo + @sucursal + @nro
+		open cursor_item
+		fetch next from cursor_item into @producto, @precio, @cantidad_item
+		while @@FETCH_STATUS = 0
+		begin
+			if exists (select 1 from Item_Factura 
+					where item_numero+item_sucursal+item_tipo <> @tipo + @sucursal + @nro
+					and item_producto = @producto )
+			begin		 
+				if(	
+					exists ( 
+						select 1 from Item_Factura 
+						join Factura on fact_numero+fact_sucursal+fact_tipo = item_numero+item_sucursal+item_tipo
+						where DATEDIFF(month, fact_fecha, @fecha) = 1 and @precio > item_precio * 1.05
+						and item_producto = @producto)
+					or 
+					exists ( 
+						select 1 from Item_Factura 
+						join Factura on fact_numero+fact_sucursal+fact_tipo = item_numero+item_sucursal+item_tipo
+						where DATEDIFF(year, fact_fecha, @fecha) = 1 and @precio > item_precio * 1.5
+						and item_producto = @producto)
+					)
+				begin 
+					delete Item_Factura
+					where item_numero = @nro and item_sucursal = @sucursal and item_tipo = @tipo
+					delete Factura 
+					where fact_numero = @nro and fact_sucursal = @sucursal and fact_tipo = @tipo 
+				end
+			end
+			fetch next from cursor_item into @producto, @precio, @cantidad_item
+		end
+		close cursor_item
+		deallocate cursor_item
+		fetch next from cursor_factura into @tipo, @sucursal, @nro
+	end
+	close cursor_factura
+	deallocate cursor_factura
+END
+GO

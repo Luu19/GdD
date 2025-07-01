@@ -696,3 +696,122 @@ begin
     DEALLOCATE cursor_productos
 END
 GO
+
+---------
+/*
+	Implentar un sistema de auditoría para registrar cada operación realizada en la tabla "cliente".
+	El sistema deberá almacenar, como mínimo, los valores (campos afectados), el tipo de operación
+	a realizar, y la fecha y hora de ejecución. Solo se permitirán operaciones individuales (no masivas)
+	sobre los registros, pero el intento de realizar operaciones masivas deberá ser registrado en el
+	sistema de auditoría
+*/
+
+CREATE TRIGGER ejercicio12
+ON Composicion
+FOR insert  
+AS
+BEGIN
+	
+	if (select sum(dbo.estaCompuestoPorSiMismo(comp_producto, comp_cantidad)) from inserted) > 1
+	begin
+		return 'ERROR'
+		rollback transaction
+	end
+END
+GO
+
+
+
+CREATE TABLE [dbo].[Auditoria_Cliente](
+	[clie_codigo] [char](6) NOT NULL,
+	[clie_razon_social] [char](100) NULL,
+	[clie_telefono] [char](100) NULL,
+	[clie_domicilio] [char](100) NULL,
+	[clie_limite_credito] [decimal](12, 2) NULL,
+	[clie_vendedor] [numeric](6, 0) NULL,
+	fecha datetime,
+	operacion_a_realizar char(2) -- U, I, D
+)
+GO
+
+
+
+
+
+create trigger auditoria_cliente
+on Cliente
+for insert, update, delete
+as
+begin
+	if( (select count(*) from inserted) > 1 or (select count(*) from deleted) > 1)
+	begin
+		INSERT INTO [dbo].[Auditoria_Cliente]
+				   ([clie_codigo]
+				   ,[clie_razon_social]
+				   ,[clie_telefono]
+				   ,[clie_domicilio]
+				   ,[clie_limite_credito]
+				   ,[clie_vendedor],
+				   fecha,
+				   operacion_a_realizar)
+			 VALUES
+				   (null
+				   ,null
+				   ,null
+				   ,null
+				   ,null
+				   ,null,
+				   getdate(),
+				   'M')
+	end
+	else
+	begin
+		if( (select count(*) from inserted) = 1 and not exists (select count(*) from deleted))
+		begin
+			INSERT INTO [dbo].[Auditoria_Cliente]
+				   select 
+				   clie_codigo, 
+				   clie_razon_social, 
+				   clie_telefono, 
+				   clie_domicilio, 
+				   clie_limite_credito, 
+				   clie_vendedor,
+				   GETDATE(),
+				   'I'
+				   from inserted
+		end
+		else
+		if( (select count(*) from deleted) = 1 and not exists (select count(*) from inserted))
+		begin
+			INSERT INTO [dbo].[Auditoria_Cliente]
+				   select 
+				   clie_codigo, 
+				   clie_razon_social, 
+				   clie_telefono, 
+				   clie_domicilio, 
+				   clie_limite_credito, 
+				   clie_vendedor,
+				   GETDATE(),
+				   'D'
+				   from deleted
+		end
+			-- UPDATE (opcional, si querés registrar el estado final como hiciste con INSERT)
+        ELSE 
+		IF ((SELECT COUNT(*) FROM inserted) = 1 AND (SELECT COUNT(*) FROM deleted) = 1)
+        BEGIN
+            INSERT INTO Auditoria_Cliente
+            SELECT 
+                clie_codigo, 
+                clie_razon_social, 
+                clie_telefono, 
+                clie_domicilio, 
+                clie_limite_credito, 
+                clie_vendedor,
+                GETDATE(),
+                'U'
+            FROM inserted
+        END
+	end
+
+end
+go

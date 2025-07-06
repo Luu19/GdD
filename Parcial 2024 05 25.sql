@@ -46,34 +46,33 @@ having sum(i.item_cantidad * i.item_precio) >
 	24/7 por lo que se deben evaluar todos los dias incluyendo domingos y feriados
 */
 go
-CREATE PROCEDURE dias_consecutivos_de_ventas
-    (@prod_codigo char(8),
-	@fecha datetime,
-	@dias_consecutivos int output)
+CREATE PROCEDURE parcial @producto char(8), @fecha smalldatetime, @max_dias_consecutivos INT OUTPUT
 AS
 BEGIN
-	declare @hay_venta int
-	declare @dia datetime
+	DECLARE @fecha_cursor smalldatetime
+	DECLARE @dias_consecutivos INT = 0
+	SET @max_dias_consecutivos = 0
+	
+	DECLARE c_fechas CURSOR FOR
+		SELECT fact_fecha FROM Factura
+		JOIN Item_Factura on item_tipo+item_sucursal+item_numero = fact_tipo+fact_sucursal+fact_numero
+		WHERE item_producto = @producto AND fact_fecha > @fecha
+		ORDER BY fact_fecha asc
+	OPEN c_fechas
+	FETCH NEXT FROM c_fechas INTO @fecha_cursor
+	WHILE @@FETCH_STATUS = 0
+		BEGIN 
+			IF DATEDIFF(DAY,@fecha,@fecha_cursor) = 1
+				SET @dias_consecutivos = @dias_consecutivos + 1
+			ELSE 
+				SET @dias_consecutivos = 0			
+			IF @dias_consecutivos > @max_dias_consecutivos
+				SET @max_dias_consecutivos = @dias_consecutivos
 
-	set @dias_consecutivos = 0
-	set @dia = @fecha
-
-	while 1 = 1
-	begin
-		select @hay_venta = count(1)
-		from Factura f
-		join Item_Factura i on i.item_numero + i.item_sucursal + i.item_tipo = f.fact_numero + f.fact_tipo + f.fact_sucursal
-		where i.item_producto = @prod_codigo
-		and CONVERT(date, f.fact_fecha) = CONVERT(date, @dia)
-
-		if @hay_venta > 1
-		begin
-			set @dias_consecutivos = 1 + @dias_consecutivos
-			set @dia = DATEADD(day, 1, @dia)
-		end
-		else
-			break
-	end
-return @dias_consecutivos
-END
+			SET @fecha = @fecha_cursor
+			FETCH NEXT FROM c_fechas INTO @fecha_cursor
+		END
+	CLOSE c_fechas
+	DEALLOCATE c_fechas
+END 
 GO
